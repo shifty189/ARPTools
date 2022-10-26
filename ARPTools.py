@@ -5,9 +5,8 @@ arp takes no arguments, and provides the arp tables from the computer its run on
 
 myPing takes and IP address as a string, and optionaly 'y' or 'n' for verbose mode. 'y' as default
 """
-import os
-from icecream import ic
-version = '0.01'
+version_Num = '0.03'
+
 
 # provide a hostname if a proper valid IP address is provided
 def getHostName(IP: str):
@@ -15,22 +14,18 @@ def getHostName(IP: str):
     try:
         hostName = socket.gethostbyaddr(IP)[0]
     except socket.herror:  # this error means host can't be found
-        # hostName = f"Device Name for {IP} can't be found"
         hostName = None
     except socket.gaierror:  # this error means a bad IP was provided
         hostName = None
     return hostName
 
 
+#arp() takes not argguments, and returns a dictionary of the systems arp table
 def arp():
     from sys import platform
     import re
+    import os
 
-    global arp_window
-    var = []
-    arpLabels = []
-    arpButton = []
-    saveButton = []
     macs = []
     IPs = []
     macSearch = r"[0-9A-Fa-f]{2}[:-]{1}[0-9A-Fa-f]{2}[:-]{1}[0-9A-Fa-f]{2}[:-]{1}[0-9A-Fa-f]{2}[:-]{1}[0-9A-Fa-f]{2}[:-]{1}[0-9A-Fa-f]{2}"
@@ -41,8 +36,8 @@ def arp():
         with os.popen("arp -a") as a:
             arpData = a.readlines()
 
-        """loop threw the arp -a return leave out the first blank line, then go threw each line and extract the MAC from the 
-        line + store it in a new list. if no MAC on the line new list gets ' '"""
+        """loop threw the arp -a return leave out the first blank line, then go threw each line and extract the MAC from
+         the line + store it in a new list. if no MAC on the line new list gets ' '"""
         for i, a in enumerate(arpData):
             if i > 0:
                 try:
@@ -64,10 +59,9 @@ def arp():
                     macs.append(' ')
                     IPs.append(' ')
 
-        back = []
+        back = {}
         for i, ip in enumerate(IPs):
-            back.append(f"{IPs[i]}: {macs[i]}")
-
+            back[f"{ip}"] = f'{macs[i]}'
         return back
     elif platform == 'linux':
         with os.popen("arp -a") as a:
@@ -77,23 +71,20 @@ def arp():
             tempIP = re.search(ipSearch, line)
             IPs.append(tempIP.group(0))
             macs.append(tempMac.group(0))
-        back = []
+        back = {}
         for i, ip in enumerate(IPs):
-            temp = ip.split(".")
-            for t in temp:  # final check that each ip is in the range of valid ip address
-                if int(t) > 255:
-                    raise ValueError("IP address' should never be higher than 255")
-            back.append(f"{IPs[i]}: {macs[i]}")
+            back[f"{ip}"] = f'{macs[i]}'
         return back
 
 
-# by default (v=y) will return a readout of the OS's ping results if v=n will simply return a True if a device is online and False if not
+"""by default (v=y) will return a readout of the OS's ping results if v=n will simply 
+return a True if a device is online and False if not"""
 def myPing(IP, c=4, v='y'):
     import re
     from icmplib import ping
 
     # test user input
-    if re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", IP) == None:
+    if re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", IP) is None:
         raise ValueError(f"{IP} is not a valid IP address")
 
     if v.lower() == 'n' or v.lower() == 'no':
@@ -101,12 +92,13 @@ def myPing(IP, c=4, v='y'):
     else:
         temp = ping(IP, count=c, privileged=False)
 
+    # if verbose flag is no, only return if a single ping was replyed to with a boolan
     if v.lower() == 'n' or v.lower() == 'no':
         return temp.is_alive
     elif v.lower() == 'y' or v.lower() == 'yes':
         lost = temp.packets_sent - temp.packets_received
         if lost < 1:
-            return (f"{temp.packets_sent} packets sent, and none of them where lost.")
+            return f"{temp.packets_sent} packets sent, and none of them where lost."
         else:
             return (
                 f"{temp.packets_sent} packets sent, and {lost} of them where lost. {int(temp.packet_loss * 100)}% in total where lost")
