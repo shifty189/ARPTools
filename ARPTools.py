@@ -5,95 +5,102 @@ arp takes no arguments, and provides the arp tables from the computer its run on
 
 myPing takes and IP address as a string, and optionaly 'y' or 'n' for verbose mode. 'y' as default
 """
-import os
-from icecream import ic
-import socket
+version_Num = '0.03'
 
 
 # provide a hostname if a proper valid IP address is provided
 def getHostName(IP: str):
+    import socket
     try:
         hostName = socket.gethostbyaddr(IP)[0]
     except socket.herror:  # this error means host can't be found
-        # hostName = f"Device Name for {IP} can't be found"
         hostName = None
     except socket.gaierror:  # this error means a bad IP was provided
         hostName = None
     return hostName
 
 
+#arp() takes not argguments, and returns a dictionary of the systems arp table
 def arp():
-    global arp_window
-    var = []
-    arpLabels = []
-    arpButton = []
-    saveButton = []
+    from sys import platform
+    import re
+    import os
+
     macs = []
     IPs = []
+    macSearch = r"[0-9A-Fa-f]{2}[:-]{1}[0-9A-Fa-f]{2}[:-]{1}[0-9A-Fa-f]{2}[:-]{1}[0-9A-Fa-f]{2}[:-]{1}[0-9A-Fa-f]{2}[:-]{1}[0-9A-Fa-f]{2}"
+    ipSearch = r"([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})"
     hostNames = []
-    # os.popen allows you to work the windows command line, "as a" lets us take the return and store it by line in a list
-    with os.popen("arp -a") as a:
-        arpData = a.readlines()
+    if platform == 'win32':
+        # os.popen allows you to work the windows command line, "as a" lets us take the return and store it by line in a list
+        with os.popen("arp -a") as a:
+            arpData = a.readlines()
 
-    """loop threw the arp -a return leave out the first blank line, then go threw each line and extract the MAC from the 
-    line + store it in a new list. if no MAC on the line new list gets ' '"""
-    for i, a in enumerate(arpData):
-        if i > 0:
-            try:
-                if a[2].isnumeric():
-                    try:
-                        ip_end = a.find(" ", 3)
-                        IPs.append(a[2:ip_end:1])
-                    except:
-                        pass
-                    try:
-                        start = a.find("-") - 2
-                        macs.append(a[start:start + 17:1])
-                    except TypeError:
-                        macs.append(' ')
-            except ValueError:
-                macs.append(' ')
-                IPs.append(' ')
-            except IndexError:
-                macs.append(' ')
-                IPs.append(' ')
+        """loop threw the arp -a return leave out the first blank line, then go threw each line and extract the MAC from
+         the line + store it in a new list. if no MAC on the line new list gets ' '"""
+        for i, a in enumerate(arpData):
+            if i > 0:
+                try:
+                    if a[2].isnumeric():
+                        try:
+                            ip_end = a.find(" ", 3)
+                            IPs.append(a[2:ip_end:1])
+                        except:
+                            pass
+                        try:
+                            start = a.find("-") - 2
+                            macs.append(a[start:start + 17:1])
+                        except TypeError:
+                            macs.append(' ')
+                except ValueError:
+                    macs.append(' ')
+                    IPs.append(' ')
+                except IndexError:
+                    macs.append(' ')
+                    IPs.append(' ')
 
-    back = []
-    for i, ip in enumerate(IPs):
-        back.append(f"{IPs[i]}: {macs[i]}")
+        back = {}
+        for i, ip in enumerate(IPs):
+            back[f"{ip}"] = f'{macs[i]}'
+        return back
+    elif platform == 'linux':
+        with os.popen("arp -a") as a:
+            arpData = a.readlines()
+        for line in arpData:
+            tempMac = re.search(macSearch, line)
+            tempIP = re.search(ipSearch, line)
+            IPs.append(tempIP.group(0))
+            macs.append(tempMac.group(0))
+        back = {}
+        for i, ip in enumerate(IPs):
+            back[f"{ip}"] = f'{macs[i]}'
+        return back
 
-    return back
 
-
-def myPing(IP, v='y'):
+"""by default (v=y) will return a readout of the OS's ping results if v=n will simply 
+return a True if a device is online and False if not"""
+def myPing(IP, c=4, v='y'):
     import re
-    answer = []
+    from icmplib import ping
 
-    #test user input
-    if re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$",IP) == None:
-        raise ValueError (f"{IP} is not a valid IP address")
-    # os.popen allows you to work the windows command line, "as a" lets us take the return and store it by line in a list
-    with os.popen(f"ping {IP}") as a:
-        pingData = a.readlines()
+    # test user input
+    if re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", IP) is None:
+        raise ValueError(f"{IP} is not a valid IP address")
 
-    pingReturn = []
-    for data in pingData:
-        if data != "\n":
-            pingReturn.append(data)
-
-    if v.lower() == 'y':
-        try:
-            answer = [pingReturn[1], pingReturn[2], pingReturn[3], pingReturn[4], pingReturn[6]]
-        except IndexError:
-            raise ValueError (f"{IP} is not a valid IP address")
-
-    elif v.lower() == 'n':
-        test = re.search('Destination host unreachable.', pingReturn[1])
-        if test is None:
-            return True
-        else:
-            return False
+    if v.lower() == 'n' or v.lower() == 'no':
+        temp = ping(IP, count=1, privileged=False)
     else:
-        print(f"must pyPing requires 1 argument and an option one for verbose as y or n. you provided {v}")
+        temp = ping(IP, count=c, privileged=False)
 
-    return answer
+    # if verbose flag is no, only return if a single ping was replyed to with a boolan
+    if v.lower() == 'n' or v.lower() == 'no':
+        return temp.is_alive
+    elif v.lower() == 'y' or v.lower() == 'yes':
+        lost = temp.packets_sent - temp.packets_received
+        if lost < 1:
+            return f"{temp.packets_sent} packets sent, and none of them where lost."
+        else:
+            return (
+                f"{temp.packets_sent} packets sent, and {lost} of them where lost. {int(temp.packet_loss * 100)}% in total where lost")
+    else:
+        raise ValueError("Only y or n are allowed as a secondary argument")
