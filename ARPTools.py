@@ -5,7 +5,8 @@ arp takes no arguments, and provides the arp tables from the computer its run on
 
 myPing takes and IP address as a string, and optionaly 'y' or 'n' for verbose mode. 'y' as default
 """
-version_Num = '0.03'
+version_Num = '0.04'
+from icecream import ic
 
 
 # provide a hostname if a proper valid IP address is provided
@@ -79,22 +80,57 @@ def arp():
 
 """by default (v=y) will return a readout of the OS's ping results if v=n will simply 
 return a True if a device is online and False if not"""
-def myPing(IP, c=4, v='y'):
+def myPing(*args, **kwargs):#IP, c=4, v='y'):
     import re
     from icmplib import ping
 
-    # test user input
-    if re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", IP) is None:
-        raise ValueError(f"{IP} is not a valid IP address")
+    # test user input and confirm the IP address provided is within the range of valid IPv4 address'
+    if re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", args[0]) is None:
+        raise ValueError(f"{args[0]} is not a valid IP address")
+    else:
+        for ip in args[0].split("."):
+            if int(ip) > 255:
+                raise ValueError (f'{args[0]} is not a valid IPv4 address')
+
+    for i, kwarg in enumerate(kwargs):
+        if kwarg.lower() == 'verbose' or kwarg.lower() == 'v':
+            v = kwargs[kwarg]
+        elif kwarg.lower() == 'count' or kwarg.lower() == 'c':
+            if not isinstance(kwargs[kwarg], int):
+                raise ValueError (f'count argument must be a full number not {kwargs[kwarg]}')
+            c = kwargs[kwarg]
+        else:
+            raise ValueError (f'Only Verbose and count can be provided as optinal arguments, you provided {kwarg}')
+
+    try:#hacky way to deal with default arguments
+        if v.lower() == 'n':
+            pass
+    except UnboundLocalError:
+        v = 'y'
+
+    try:  # hacky way to deal with default arguments
+        if c == 0:
+            pass
+    except UnboundLocalError:
+        c = 4
 
     if v.lower() == 'n' or v.lower() == 'no':
-        temp = ping(IP, count=1, privileged=False)
+        temp = ping(args[0], count=1, privileged=False)
     else:
-        temp = ping(IP, count=c, privileged=False)
+        temp = ping(args[0], count=c, privileged=False)
 
     # if verbose flag is no, only return if a single ping was replyed to with a boolan
     if v.lower() == 'n' or v.lower() == 'no':
+        count = 0
+        while count < 3:
+            if temp.is_alive:
+                return temp.is_alive
+            else:
+                count += 1
+                if count < 3:
+                    temp = ping(args[0], count=1, privileged=False)
         return temp.is_alive
+
     elif v.lower() == 'y' or v.lower() == 'yes':
         lost = temp.packets_sent - temp.packets_received
         if lost < 1:
@@ -103,4 +139,5 @@ def myPing(IP, c=4, v='y'):
             return (
                 f"{temp.packets_sent} packets sent, and {lost} of them where lost. {int(temp.packet_loss * 100)}% in total where lost")
     else:
-        raise ValueError("Only y or n are allowed as a secondary argument")
+        raise ValueError("Only y or n are allowed as an argument for verbose")
+
