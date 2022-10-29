@@ -5,9 +5,7 @@ arp takes no arguments, and provides the arp tables from the computer its run on
 
 myPing takes and IP address as a string, and optionaly 'y' or 'n' for verbose mode. 'y' as default
 """
-version_Num = '0.04'
-from icecream import ic
-
+version_Num = '0.05'
 
 # provide a hostname if a proper valid IP address is provided
 def getHostName(IP: str):
@@ -62,7 +60,8 @@ def arp():
 
         back = {}
         for i, ip in enumerate(IPs):
-            back[f"{ip}"] = f'{macs[i]}'
+            venMac = f"{macs[i][0:2]}{macs[i][3:5]}{macs[i][6:8]}"
+            back[f"{ip}"] = f'{macs[i]}({vendorLookup(venMac)})'
         return back
     elif platform == 'linux':
         with os.popen("arp -a") as a:
@@ -74,23 +73,24 @@ def arp():
             macs.append(tempMac.group(0))
         back = {}
         for i, ip in enumerate(IPs):
-            back[f"{ip}"] = f'{macs[i]}'
+            venMac = f"{macs[i][0:2]}{macs[i][3:5]}{macs[i][6:8]}"
+            back[f"{ip}"] = f'{macs[i]}({vendorLookup(venMac)})'
         return back
 
 
 """by default (v=y) will return a readout of the OS's ping results if v=n will simply 
 return a True if a device is online and False if not"""
-def myPing(*args, **kwargs):#IP, c=4, v='y'):
+def myPing(IP, *args, **kwargs):
     import re
     from icmplib import ping
 
     # test user input and confirm the IP address provided is within the range of valid IPv4 address'
-    if re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", args[0]) is None:
-        raise ValueError(f"{args[0]} is not a valid IP address")
+    if re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", IP) is None:
+        raise ValueError(f"{IP} is not a valid IP address")
     else:
-        for ip in args[0].split("."):
+        for ip in IP.split("."):
             if int(ip) > 255:
-                raise ValueError (f'{args[0]} is not a valid IPv4 address')
+                raise ValueError (f'{IP} is not a valid IPv4 address')
 
     for i, kwarg in enumerate(kwargs):
         if kwarg.lower() == 'verbose' or kwarg.lower() == 'v':
@@ -115,9 +115,9 @@ def myPing(*args, **kwargs):#IP, c=4, v='y'):
         c = 4
 
     if v.lower() == 'n' or v.lower() == 'no':
-        temp = ping(args[0], count=1, privileged=False)
+        temp = ping(IP, count=1, privileged=False)
     else:
-        temp = ping(args[0], count=c, privileged=False)
+        temp = ping(IP, count=c, privileged=False)
 
     # if verbose flag is no, only return if a single ping was replyed to with a boolan
     if v.lower() == 'n' or v.lower() == 'no':
@@ -128,7 +128,7 @@ def myPing(*args, **kwargs):#IP, c=4, v='y'):
             else:
                 count += 1
                 if count < 3:
-                    temp = ping(args[0], count=1, privileged=False)
+                    temp = ping(IP, count=1, privileged=False)
         return temp.is_alive
 
     elif v.lower() == 'y' or v.lower() == 'yes':
@@ -140,4 +140,20 @@ def myPing(*args, **kwargs):#IP, c=4, v='y'):
                 f"{temp.packets_sent} packets sent, and {lost} of them where lost. {int(temp.packet_loss * 100)}% in total where lost")
     else:
         raise ValueError("Only y or n are allowed as an argument for verbose")
+
+
+def vendorLookup(usermac):
+    if usermac == "ffffff":
+        return "Broadcast address"
+    with open('vendor macs.txt', 'r', encoding='utf-8') as file:
+        vendorAndMacs = file.read().splitlines()
+
+    #dict with keys of vendors mac address (first 6 chars) in lower case
+    tempMacs = {}
+    for mac in vendorAndMacs:
+        tempMacs[mac[0:6].lower()] = mac[7:-1]
+    try:
+        return tempMacs[usermac]
+    except KeyError:
+        return f"Unknown Vendor {usermac[0:2]}:{usermac[2:4]}:{usermac[4:]}"
 
