@@ -1,7 +1,7 @@
 import unittest
 import ARPTools
 
-
+version = "0.01"
 class TestSizeConverter(unittest.TestCase):
     def testNegative(self):
         expected = "Negative numbers are not supported: -50"
@@ -52,23 +52,19 @@ class TestSizeConverter(unittest.TestCase):
 class TestVendorLookup(unittest.TestCase):
     def testVendorLookupBroadcast(self):
         actual = ARPTools.vendorLookup('ffffff')
-        expected = 'Broadcast address'
-        self.assertEqual(actual, expected)
+        self.assertEqual(actual, 'Broadcast address')
 
     def testVendorLookupUnknown(self):
         actual = ARPTools.vendorLookup('aaaaa')
-        expected = 'Unknown Vendor aa:aa:a'
-        self.assertEqual(actual, expected)
+        self.assertEqual(actual, 'Unknown Vendor aa:aa:a')
 
     def testVendorLookupCisco(self):
         actual = ARPTools.vendorLookup('00000C')
-        expected = 'Cisco'
-        self.assertEqual(actual, expected)
+        self.assertEqual(actual, 'Cisco')
 
     def testVendorLookupHyundai(self):
         actual = ARPTools.vendorLookup('00003B')
-        expected = 'Hyundai'
-        self.assertEqual(actual, expected)
+        self.assertEqual(actual, 'Hyundai')
 
     def testVendorLookupKyung(self):
         actual = ARPTools.vendorLookup('0005C1')
