@@ -5,7 +5,51 @@ arp takes no arguments, and provides the arp tables from the computer its run on
 
 myPing takes and IP address as a string, and optionaly 'y' or 'n' for verbose mode. 'y' as default
 """
-version_Num = '0.05'
+import math
+version_Num = '0.08'
+
+
+def convert_size(size_bytes: int) -> str:
+   if size_bytes == 0:
+       return "0B"
+   size_name = ("B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
+   i = int(math.floor(math.log(size_bytes, 1024)))
+   p = math.pow(1024, i)
+   s = round(size_bytes / p, 2)
+   return "%s %s" % (s, size_name[i])
+
+
+def systemStatus() -> dict:
+    import psutil
+    import platform
+
+    CPU = platform.processor()
+    cpuRate = psutil.cpu_percent()
+    processes = psutil.process_iter()
+    processNum = len(psutil.pids())
+    processList = []
+    disks = {}
+    for disk in psutil.disk_partitions():
+        try:
+            disks[disk.device] = psutil.disk_usage(disk.device)
+        except PermissionError:
+            disks[disk.device] = 'Non readable drive'
+            ...
+    for process in processes:
+        processList.append(process.name())
+    CPUload = psutil.cpu_percent(interval=1)
+    tempmemory = psutil.virtual_memory()
+    answer = {}
+    answer['processNum'] = processNum
+    answer['processes'] = processList
+    answer['CPUName'] = CPU
+    answer['CPUload'] = CPUload
+    answer['disks'] = disks
+    answer['cpuRate'] = cpuRate
+    answer['freeRam'] = convert_size(tempmemory.available)
+    answer['totalRam'] = convert_size(tempmemory.total)
+    return answer
+
 
 # provide a hostname if a proper valid IP address is provided
 def getHostName(IP: str):
@@ -20,7 +64,7 @@ def getHostName(IP: str):
 
 
 #arp() takes not argguments, and returns a dictionary of the systems arp table
-def arp():
+def arp() -> dict:
     from sys import platform
     import re
     import os
@@ -80,7 +124,7 @@ def arp():
 
 """by default (v=y) will return a readout of the OS's ping results if v=n will simply 
 return a True if a device is online and False if not"""
-def myPing(IP, *args, **kwargs):
+def myPing(IP: str, **kwargs):
     import re
     from icmplib import ping
 
@@ -142,7 +186,7 @@ def myPing(IP, *args, **kwargs):
         raise ValueError("Only y or n are allowed as an argument for verbose")
 
 
-def vendorLookup(usermac):
+def vendorLookup(usermac: str) -> str:
     if usermac == "ffffff":
         return "Broadcast address"
     with open('vendor macs.txt', 'r', encoding='utf-8') as file:
@@ -156,4 +200,3 @@ def vendorLookup(usermac):
         return tempMacs[usermac]
     except KeyError:
         return f"Unknown Vendor {usermac[0:2]}:{usermac[2:4]}:{usermac[4:]}"
-
