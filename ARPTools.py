@@ -6,7 +6,7 @@ arp takes no arguments, and provides the arp tables from the computer its run on
 myPing takes and IP address as a string, and optionaly 'y' or 'n' for verbose mode. 'y' as default
 """
 import math
-version_Num = '0.08'
+version_Num = '0.09'
 
 
 class System:
