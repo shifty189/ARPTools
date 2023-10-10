@@ -9,6 +9,36 @@ import math
 version_Num = '0.08'
 
 
+class System:
+    def __init__(self, ip):
+        self.Name = getHostName(ip)
+        self.IP = ip
+        self.MAC = arp()[ip]
+        self.OS = OScheck(ip)
+
+    def report(self):
+        print(f'Name: {self.Name}')
+        print(f'Ip Address: {self.IP}')
+        print(f'Mac address: {self.MAC}')
+        print(f'Operating System: {self.OS}')
+        reportList = [f'Name: {self.Name}', f'Ip Address: {self.IP}', f'Mac address: {self.MAC}', f'Operating System: {self.OS}']
+        return reportList
+
+
+def OScheck(IP):
+    import os
+    with os.popen(f"ping {IP}") as a:
+        ping = a.readlines()
+    temp = ping[2].split(' ')
+    temp = temp[5]
+    temp = temp.split('=')
+    if temp[1][:3] == '128':
+        return 'win32'
+    elif temp[1][:2] == '64':
+        return 'Linux'
+    else:
+        return f'unknown {temp[1]}'
+
 def convert_size(size_bytes: int) -> str:
    if size_bytes == 0:
        return "0B"
@@ -79,8 +109,10 @@ def arp() -> dict:
         with os.popen("arp -a") as a:
             arpData = a.readlines()
 
-        """loop threw the arp -a return leave out the first blank line, then go threw each line and extract the MAC from
-         the line + store it in a new list. if no MAC on the line new list gets ' '"""
+        """
+        loop threw the arp -a return leave out the first blank line, then go threw each line and extract the MAC from
+        the line + store it in a new list. if no MAC on the line new list gets ' '
+        """
         for i, a in enumerate(arpData):
             if i > 0:
                 try:
@@ -200,3 +232,8 @@ def vendorLookup(usermac: str) -> str:
         return tempMacs[usermac]
     except KeyError:
         return f"Unknown Vendor {usermac[0:2]}:{usermac[2:4]}:{usermac[4:]}"
+
+
+
+PC = System('10.0.0.15')
+PC.report()
