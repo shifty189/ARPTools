@@ -13,6 +13,7 @@ class System:
     def __init__(self, ip):
         self.Name = getHostName(ip)
         self.IP = ip
+        testing = arp()
         self.MAC = arp()[ip]
         self.OS = OScheck(ip)
 
@@ -29,17 +30,22 @@ def OScheck(IP):
     import os
     with os.popen(f"ping {IP}") as a:
         ping = a.readlines()
-    temp = ping[2].split(' ')
-    temp = temp[5]
-    temp = temp.split('=')
+    try:
+        temp = ping[2].split(' ')
+        temp = temp[5]
+        temp = temp.split('=')
+    except:
+        return'Unknown'
     if temp[1][:3] == '128':
         return 'win32'
     elif temp[1][:2] == '64':
         return 'Linux'
     else:
-        return f'unknown {temp[1]}'
+        return f'Unknown {temp[1]}'
 
 def convert_size(size_bytes: int) -> str:
+   if size_bytes < 0:
+       return 'Negative numbers are not supported: -50'
    if size_bytes == 0:
        return "0B"
    size_name = ("B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
@@ -235,5 +241,5 @@ def vendorLookup(usermac: str) -> str:
 
 
 
-PC = System('10.0.0.15')
+PC = System('10.0.0.12')
 PC.report()
