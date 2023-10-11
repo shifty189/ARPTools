@@ -6,24 +6,60 @@ arp takes no arguments, and provides the arp tables from the computer its run on
 myPing takes and IP address as a string, and optionaly 'y' or 'n' for verbose mode. 'y' as default
 """
 import math
-version_Num = '0.09'
+import os
+import ipaddress
+import socket
+version_Num = '0.10'
 
 
 class System:
     def __init__(self, ip):
-        self.Name = getHostName(ip)
-        self.IP = ip
-        testing = arp()
-        self.MAC = arp()[ip]
-        self.OS = OScheck(ip)
+        try:
+            ipaddress.ip_address(ip)
+            systemType = 'ip'
+        except ValueError:
+            systemType = 'hostname'
+        if systemType == 'ip':
+            self.Name = getHostName(ip)
+            self.IP = ip
+            # testing = arp()
+            self.MAC = arp()[ip]
+            self.OS = OScheck(ip)
+            self.shares = self.shareCheck()
+        else:
+            self.Name = ip
+            self.IP = socket.gethostbyname(self.Name)
+            # testing = arp()
+            if self.IP == 'unknown':
+                ...
+            else:
+                self.MAC = arp()[self.IP]
+            self.OS = OScheck(ip)
+            self.shares = self.shareCheck()
 
     def report(self):
         print(f'Name: {self.Name}')
         print(f'Ip Address: {self.IP}')
         print(f'Mac address: {self.MAC}')
         print(f'Operating System: {self.OS}')
-        reportList = [f'Name: {self.Name}', f'Ip Address: {self.IP}', f'Mac address: {self.MAC}', f'Operating System: {self.OS}']
+        print(f'Shares: {self.shares}')
+        reportList = [f'Name: {self.Name}', f'Ip Address: {self.IP}', f'Mac address: {self.MAC}', f'Operating System: {self.OS}', f'Shares: {self.shares}']
         return reportList
+
+    def shareCheck(self):
+        temp = []
+        temp2 = []
+        with os.popen(f"net view \\\\{self.Name}") as a:
+            shareData = a.readlines()
+
+        for i, s in enumerate(shareData):
+            if i < 7:
+                ...
+            else:
+                temp.append(s.replace(' ', ''))
+        for t in temp:
+            temp2.append(t.strip())
+        return temp2
 
 
 def OScheck(IP):
@@ -241,5 +277,9 @@ def vendorLookup(usermac: str) -> str:
 
 
 
-PC = System('10.0.0.12')
+PC = System('192.168.10.2')
+# PC = System('CNSSRVR')
+
+# print(socket.gethostbyname('CNSSRVR'))
 PC.report()
+# print(PC.shares)
